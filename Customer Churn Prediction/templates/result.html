@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Prediction Result</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <div class="prediction-container">
+        <h1>Prediction Result</h1>
+        <p class="prediction">Model predicted that Customer is likely to :</p>
+        <h2 class="{% if prediction == 'Churn' %}churn{% else %}not-churn{% endif %}"> {{ prediction }} </h2>
+        <p class="prediction">Probability of Customer Churning : {{ predict_probabality }}</p>
+    </div>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+    "data": {
+        "zip_code": 90201,
+        "tenure": 72,
+        "contract": "Month-to-month",
+        "internet_service": "No",
+        "offer": "Offer E",
+        "payement_method": "Mailed check",
+        "age": 42,
+        "online_security": 0,
+        "tech_support": 1,
+        "paperless_billing": 0,
+        "married" : 0,
+        "refered_a_friend": 1,
+        "total_revenue" : 1323.65,
+        "satisfaction_score" : 5
+    }
+}
