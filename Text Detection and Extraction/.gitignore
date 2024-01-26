@@ -162,3 +162,5 @@ cython_debug/
 
 # Ignore database files
 database.db
+
+image_uploads/
