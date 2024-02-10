@@ -10,6 +10,10 @@ print("importing Easy OCR lib...", end = " ")
 from utils import easyocr_util
 print("done!")
 
+print("importing keras_ocr lib...", end = " ")
+from utils import keras_ocr_util
+print("done!")
+
 print("importing google doc AI lib...", end = " ")
 #from utils import google_document_ai_util
 print("done!")
@@ -22,52 +26,40 @@ print("importing pytesseract lib...", end = " ")
 #from utils import pytesseract_util
 print("done!")
 
-print("importing keras_ocr lib...", end = " ")
-#from utils import keras_ocr_util
-print("done!")
-
 print("Done with imports!!")
 
-def extract_text(file_path: str, model_to_use: str = "all"):
-    
+def extract_text(file_path: str, models_to_use: list = ["all"]):
     extracted_texts = []
 
-    print("Extracting text using Easy OCR:")
-
-    if model_to_use == "all" or model_to_use == "easy_ocr":
+    if "all" in models_to_use or "easy_ocr" in models_to_use:
+        print("Extracting text using Easy OCR:")
         extracted_text = easyocr_util.easy_ocr_extract_text(file_path)
         extracted_texts.append({'model_name' : "easy_ocr", 'extracted_text' : extracted_text})
+        print("Result : ", extracted_texts[-1])
 
-    print("Result : ", extracted_texts[0])
-
-    return extracted_texts
-
-    print("Extracting text using Google Doc AI:")
-
-    if model_to_use == "all" or model_to_use == "google_document_ai":
+    if "all" in models_to_use or "google_document_ai" in models_to_use:
+        print("Extracting text using Google Doc AI:")
         extracted_text = google_document_ai_util.google_doc_ai_extract_text(file_path)
         extracted_texts.append({'model_name' : "google_document_ai", 'extracted_text' : extracted_text})
+        print("Result : ", extracted_texts[-1])
 
-    print("Result : ", extracted_texts[1])
-
-    print("Extracting text using keras_ocr:")
-    if model_to_use == "all" or model_to_use == "keras_ocr":
+    if "all" in models_to_use or "keras_ocr" in models_to_use:
+        print("Extracting text using keras_ocr:")
         extracted_text = keras_ocr_util.keras_ocr_extract_text(file_path)
         extracted_texts.append({'model_name' : "keras_ocr", 'extracted_text' : extracted_text}) 
+        print("Result : ", extracted_texts[-1])
 
-    print("Result : ", extracted_texts[2])
-
-    print("Extracting text using pix2text:")
-    if model_to_use == "all" or model_to_use == "pix2text":
+    if "all" in models_to_use or "pix2text" in models_to_use:
+        print("Extracting text using pix2text:")
         extracted_text = pix2text_util.pix2text_extract_text(file_path)
         extracted_texts.append({'model_name' : "pix2text", 'extracted_text' : extracted_text})
-    print("Result : ", extracted_texts[3])
+        print("Result : ", extracted_texts[-1])
 
-    print("Extracting text using pytesseract:")
-    if model_to_use == "all" or model_to_use == "pytesseract":
+    if "all" in models_to_use or "pytesseract" in models_to_use:
+        print("Extracting text using pytesseract:")
         extracted_text = pytesseract_util.pytesseract_extract_text(file_path)
         extracted_texts.append({'model_name' : "pytesseract", 'extracted_text' : extracted_text})
-    print("Result : ", extracted_texts[4])
+        print("Result : ", extracted_texts[-1])
 
     return extracted_texts
 

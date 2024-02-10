@@ -1,3 +1,9 @@
+{% extends 'base.html' %}
+
+{% block title %}OCR PAGE{% endblock %}
+
+{% block content %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -145,17 +151,23 @@
                 formData.append('uploadedImages[]', image.src);
             });
 
-            // Now you can use formData to send the form data to the server
-            // Example: 
+            // Now we can use formData to send the form data to the server
             fetch('/upload_images', {
                 method: 'POST',
                 body: formData
-            }).then(response => {
-                console.log(response);
-                // handle the response
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data.paths);
+                //send these paths data to another page for processing
+                window.location = "{{url_for('text_extraction_progress')}}";
+            })
+            .catch(error => {
+                console.error('Error uploading image:', error);
             });
         }
     </script>
 </body>
 
 </html>
+{% endblock %}
