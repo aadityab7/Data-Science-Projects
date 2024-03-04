@@ -5,26 +5,7 @@
 {% block content %}
 
 <div>
-	<h1>Text Extraction Progress</h1>
-
+	<h1>Text Extraction Progress {{batch_number}}</h1>
 </div>
-
-<script type="text/javascript">
-	$.ajax({
-        type: 'POST',
-        url: "{{url_for('extract_text', _external=True, _scheme='https')}}",
-        data: {process_id: process_id},
-        success: function (data) {
-        	if(data.response_status === "OK") {
-        		document.getElementById('similar_question_clock').classList.add('hidden');
-        		document.getElementById('similar_question_check').classList.remove('hidden');
-        		redirect_to_question_details_page();
-        	}
-        },
-        error: function(xhr, status, error) {
-            console.error('Error in question_step_similar_question:', error);
-        }
-    });
-</script>
 
 {% endblock %}

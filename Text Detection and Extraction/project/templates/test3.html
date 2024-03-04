@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progress Tracker</title>
+</head>
+<body>
+    <h1>Progress Tracker</h1>
+    <div id="progress"></div>
+
+    <script>
+        const progressDiv = document.getElementById('progress');
+
+        const source = new EventSource('/progress_updates');
+        source.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            const progress = Math.round((data.current_step / data.total_steps) * 100);
+            progressDiv.innerText = `Progress: ${progress}%`;
+        };
+
+        source.onerror = function(event) {
+            console.error('EventSource failed:', event);
+            source.close();
+        };
+    </script>
+</body>
+</html>

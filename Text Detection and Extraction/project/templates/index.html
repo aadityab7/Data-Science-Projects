@@ -158,9 +158,11 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log(data.paths);
+                console.log(data);
+                console.log(data.batch_number);
+                var batch_number = data.batch_number || 0;
                 //send these paths data to another page for processing
-                window.location = "{{url_for('text_extraction_progress')}}";
+                window.location = "/extract_text/" + batch_number;
             })
             .catch(error => {
                 console.error('Error uploading image:', error);
