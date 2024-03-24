@@ -1,11 +1,54 @@
 {% extends 'base.html' %}
 
-{% block title %}Text Extraction Progress{% endblock %}
+{% block title %}Text Extraction Progress Page{% endblock %}
 
 {% block content %}
 
 <div>
-	<h1>Text Extraction Progress {{batch_number}}</h1>
+	<h1>Text Extraction Progress for batch: {{batch_number}}</h1>
+	<div id="image_processed_status"></div>
+	<div id="image_processed_count"></div>
 </div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
+<script type="text/javascript" charset="utf-8">
+	var batch_number = {{batch_number}};
+    var processing_completed = false;
+
+    var socket_str = 'http://' + document.domain + ':' + location.port + '/image_processed?batch_number=' + batch_number;
+
+    // console.log('socket_str');
+    // console.log(socket_str);
+    
+    var socket = io.connect(socket_str);
+
+    socket.on('connect', function() {
+        // console.log('Connected to server.');
+        document.getElementById('image_processed_status').innerText = 'Connection made sucessfully!';
+    });
+
+    socket.on('image_processed', function(msg) {
+        // console.log('completed another one!')   
+        // console.log(msg.done_num_processed);
+        document.getElementById('image_processed_count').innerText = 'Images processed: ' + msg.done_num_processed;
+    });
+
+    socket.on('image_processing_finished', function() {
+        // console.log('image processing finished. Disconnecting...');
+        socket.disconnect(); // Disconnect the socket
+        processing_completed = true;
+        document.getElementById('image_processed_status').innerText = 'Image Processing Completed! Closing the connection.';
+        //we can also make a call to redirect to the results page.
+    });
+
+    socket.on('disconnect', function() {
+        // console.log('Disconnected from server.');
+        //this only shows any changes when socket connection is suddenly closed - not on successful completion.
+        if (processing_completed === false){
+            document.getElementById('image_processed_status').innerText = 'Connection lost. Please refresh the page.';
+        }
+    });
+    
+</script>
 
 {% endblock %}
