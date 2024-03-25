@@ -10,6 +10,8 @@ import random
 import time
 import threading
 
+from utils import ocr
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -169,8 +171,15 @@ def process_image(batch_number, offset, limit = 1):
     print(f"url of the next img to be processed: {url}")
 
     #use the util methods to actually extract the text here 
-    extracted_text = url
+    list_of_models = ocr.list_of_models
 
+    extracted_texts = []
+    for model in list_of_models:
+        extracted_text = ocr.extract_text(file_path = url, model_to_use = model)
+        extracted_texts.append(extract_text)
+
+    print(extracted_texts)
+    
     c.execute(
         """
         UPDATE images 

@@ -1,67 +1,166 @@
-from PIL import Image
+print("Starting Imports")
+
+#Easy OCR imports
+print("Easy OCR Imports")
+import easyocr
+print("Easy OCR Imports done!")
+
+def easy_ocr_extract_text(file_path: str):
+    reader = easyocr.Reader(['en'])
+
+    #easy_ocr_result = reader.readtext(file_path)
+    easy_ocr_result = reader.readtext(file_path, detail = 0) #only return text
+
+    return easy_ocr_result
+
+#keras_ocr imports
+print("Keras OCR Imports")
+import matplotlib.pyplot as plt
+print("Keras OCR Imports done!")
+
+import keras_ocr
+
+def keras_ocr_extract_text(file_path: str):
+    # keras-ocr will automatically download pretrained
+    # weights for the detector and recognizer.
+    pipeline = keras_ocr.pipeline.Pipeline()
+    
+    image = [keras_ocr.tools.read(file_path)]
+
+    text_predictions = pipeline.recognize(image)
+
+    #return only the text for now - so extract text from the result
+    keras_ocr_result = []
+    for prediction in text_predictions[0]:
+        keras_ocr_result.append(prediction[0])
+
+    return keras_ocr_result
+
+#pix2text imports
+print("Pix2Text Imports")
+from pix2text import Pix2Text, merge_line_texts
+print("Pix2Text Imports done!")
+
+def pix2text_extract_text(file_path: str):
+    p2t = Pix2Text(analyzer_config=dict(model_name='mfd'))
+
+    pix2text_result = p2t.recognize(file_path)
+    pix2text_result = merge_line_texts(pix2text_result, auto_line_break=True) #return only the text part
+
+    return pix2text_result
+
+#PyTesseract imports
+print("PyTesseract Imports")
+import pytesseract
+print("PyTesseract Imports done!")
+
+def pytesseract_extract_text(file_path: str):
+    #pytesseract_result = pytesseract.image_to_boxes(file_path)
+    pytesseract_result = pytesseract.image_to_string(file_path) #return only the text part
+
+    return pytesseract_result
+
+#Google Document API imports
+print("Google Docs Imports")
+from google.api_core.client_options import ClientOptions
+from google.cloud import documentai  # type: ignore
+print("Google Docs Imports done!")
+
+def google_doc_ai_extract_text(file_path: str):
+    project_id = "text-detection-and-extraction"
+    location = "eu"
+    processor_display_name = "text-extraction-document-ocr"
+    processor_id = "d208ef269819caba"
+
+    extentions_mime_types = {
+        "pdf"   :   "application/pdf",
+        "gif"  :   "image/gif",
+        "tiff" :   "image/tiff",
+        "tif"  :   "image/tiff",
+        "jpg"  :   "image/jpeg",
+        "jpeg" :   "image/jpeg",
+        "png"  :   "image/png",
+        "bmp"  :   "image/bmp",
+        "webp" :   "image/webp"
+    }
+
+    mime_type = extentions_mime_types[file_path.split('.')[-1]]
+
+    # You must set the `api_endpoint`if you use a location other than "us".
+    opts = ClientOptions(api_endpoint=f"{location}-documentai.googleapis.com")
+
+    client = documentai.DocumentProcessorServiceClient(client_options=opts)
+
+    name = client.processor_path(project_id, location, processor_id)
+
+    # Read the file into memory
+    with open(file_path, "rb") as image:
+        image_content = image.read()
+
+    # Load binary data
+    raw_document = documentai.RawDocument(
+        content=image_content,
+        mime_type=mime_type,  # Refer to https://cloud.google.com/document-ai/docs/file-types for supported file types
+    )
+
+    # Configure the process request
+    # `processor.name` is the full resource name of the processor, e.g.:
+    # `projects/{project_id}/locations/{location}/processors/{processor_id}`
+    request = documentai.ProcessRequest(name=name, raw_document=raw_document)
+
+    result = client.process_document(request=request)
+
+    # For a full list of `Document` object attributes, reference this page:
+    # https://cloud.google.com/document-ai/docs/reference/rest/v1/Document
+    document = result.document
+
+    #print("retured document :")
+    #print(document)
+
+    # Read the text recognition output from the processor
+    extracted_text = document.text
+
+    return extracted_text
 
 #Meta's Nougat imports - to convert other image formats into pdf files
-"""print("importing Meta's Nougat libs...")
+print("Meta's Nougat Imports")
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from PIL import Image"""
+from PIL import Image
+print("Meta's Nougat Imports done!")
 
-print("importing Easy OCR lib...", end = " ")
-from utils import easyocr_util
-print("done!")
-
-print("importing keras_ocr lib...", end = " ")
-from utils import keras_ocr_util
-print("done!")
-
-print("importing google doc AI lib...", end = " ")
-#from utils import google_document_ai_util
-print("done!")
-
-print("importing pix2text lib...", end = " ")
-#from utils import pix2text_util
-print("done!")
-
-print("importing pytesseract lib...", end = " ")
-#from utils import pytesseract_util
-print("done!")
+def meta_nougat_extract_text(file_path: str):
+    return file_path 
 
 print("Done with imports!!")
 
-def extract_text(file_path: str, models_to_use: list = ["all"]):
-    extracted_texts = []
+list_of_models = [
+    "easy_ocr", 
+    "keras_ocr",
+    "pix2text",
+    "pytesseract",
+    #"google_document_ai",
+    #"meta_nougat"
+]
 
-    if "all" in models_to_use or "easy_ocr" in models_to_use:
-        print("Extracting text using Easy OCR:")
-        extracted_text = easyocr_util.easy_ocr_extract_text(file_path)
-        extracted_texts.append({'model_name' : "easy_ocr", 'extracted_text' : extracted_text})
-        print("Result : ", extracted_texts[-1])
+def extract_text(file_path: str, model_to_use: str = ""):
+    print(f"Extracting text for file: {file_path} using model: {model_to_use}")
 
-    if "all" in models_to_use or "google_document_ai" in models_to_use:
-        print("Extracting text using Google Doc AI:")
-        extracted_text = google_document_ai_util.google_doc_ai_extract_text(file_path)
-        extracted_texts.append({'model_name' : "google_document_ai", 'extracted_text' : extracted_text})
-        print("Result : ", extracted_texts[-1])
+    extracted_text = ""
 
-    if "all" in models_to_use or "keras_ocr" in models_to_use:
-        print("Extracting text using keras_ocr:")
-        extracted_text = keras_ocr_util.keras_ocr_extract_text(file_path)
-        extracted_texts.append({'model_name' : "keras_ocr", 'extracted_text' : extracted_text}) 
-        print("Result : ", extracted_texts[-1])
+    if model_to_use == "easy_ocr":
+        extracted_text = easy_ocr_extract_text(file_path)
+    elif model_to_use == "keras_ocr":
+        extracted_text = keras_ocr_extract_text(file_path)
+    elif model_to_use ==  "pix2text":
+        extracted_text = pix2text_extract_text(file_path)
+    elif model_to_use == "pytesseract":
+        extracted_text = pytesseract_extract_text(file_path)
+    elif model_to_use == "google_document_ai":
+        extracted_text = google_doc_ai_extract_text(file_path)
+    elif model_to_use == "meta_nougat":
+        extracted_text = meta_nougat_extract_text(file_path)
 
-    if "all" in models_to_use or "pix2text" in models_to_use:
-        print("Extracting text using pix2text:")
-        extracted_text = pix2text_util.pix2text_extract_text(file_path)
-        extracted_texts.append({'model_name' : "pix2text", 'extracted_text' : extracted_text})
-        print("Result : ", extracted_texts[-1])
+    print("Result : ", extracted_text)
 
-    if "all" in models_to_use or "pytesseract" in models_to_use:
-        print("Extracting text using pytesseract:")
-        extracted_text = pytesseract_util.pytesseract_extract_text(file_path)
-        extracted_texts.append({'model_name' : "pytesseract", 'extracted_text' : extracted_text})
-        print("Result : ", extracted_texts[-1])
-
-    return extracted_texts
-
-def meta_nougat_extract_text(file_path: str):
-    pass
+    return extracted_text
