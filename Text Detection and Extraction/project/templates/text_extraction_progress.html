@@ -5,17 +5,17 @@
 {% block content %}
 
 <div>
-	<h1>Text Extraction Progress for batch: {{batch_number}}</h1>
+	<h1>Text Extraction Progress for batch: {{batch_id}}</h1>
 	<div id="image_processed_status"></div>
 	<div id="image_processed_count"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.3/socket.io.js"></script>
 <script type="text/javascript" charset="utf-8">
-	var batch_number = {{batch_number}};
+	var batch_id = {{batch_id}};
     var processing_completed = false;
 
-    var socket_str = 'http://' + document.domain + ':' + location.port + '/image_processed?batch_number=' + batch_number;
+    var socket_str = 'http://' + document.domain + ':' + location.port + '/image_processed?batch_id=' + batch_id;
 
     // console.log('socket_str');
     // console.log(socket_str);

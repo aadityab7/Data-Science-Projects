@@ -1,9 +1,47 @@
+#does import time vary depending upon the drive? Nope
+
 print("Starting Imports")
 
-#Easy OCR imports
+#Easy OCR imports - should take approx. 15 seconds to import
 print("Easy OCR Imports")
 import easyocr
 print("Easy OCR Imports done!")
+
+"""
+#keras_ocr imports ~ 9 minutes to import
+print("Keras OCR Imports")
+import matplotlib.pyplot as plt
+import keras_ocr
+print("Keras OCR Imports done!")
+"""
+
+#pix2text imports ~ 2.6 minutes
+print("Pix2Text Imports")
+from pix2text import Pix2Text, merge_line_texts
+print("Pix2Text Imports done!")
+
+#PyTesseract imports ~ 5 seconds
+print("PyTesseract Imports")
+import pytesseract
+print("PyTesseract Imports done!")
+
+"""
+#Google Document API imports ~ 30 seconds
+print("Google Docs Imports")
+from google.api_core.client_options import ClientOptions
+from google.cloud import documentai  # type: ignore
+print("Google Docs Imports done!")
+
+#Meta's Nougat imports - to convert other image formats into pdf files ~ 4 seconds
+print("Meta's Nougat Imports")
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from PIL import Image
+import subprocess
+print("Meta's Nougat Imports done!")
+"""
+
+print("Done with imports!!")
 
 def easy_ocr_extract_text(file_path: str):
     reader = easyocr.Reader(['en'])
@@ -12,13 +50,6 @@ def easy_ocr_extract_text(file_path: str):
     easy_ocr_result = reader.readtext(file_path, detail = 0) #only return text
 
     return easy_ocr_result
-
-#keras_ocr imports
-print("Keras OCR Imports")
-import matplotlib.pyplot as plt
-print("Keras OCR Imports done!")
-
-import keras_ocr
 
 def keras_ocr_extract_text(file_path: str):
     # keras-ocr will automatically download pretrained
@@ -36,11 +67,6 @@ def keras_ocr_extract_text(file_path: str):
 
     return keras_ocr_result
 
-#pix2text imports
-print("Pix2Text Imports")
-from pix2text import Pix2Text, merge_line_texts
-print("Pix2Text Imports done!")
-
 def pix2text_extract_text(file_path: str):
     p2t = Pix2Text(analyzer_config=dict(model_name='mfd'))
 
@@ -49,23 +75,13 @@ def pix2text_extract_text(file_path: str):
 
     return pix2text_result
 
-#PyTesseract imports
-print("PyTesseract Imports")
-import pytesseract
-print("PyTesseract Imports done!")
-
 def pytesseract_extract_text(file_path: str):
     #pytesseract_result = pytesseract.image_to_boxes(file_path)
     pytesseract_result = pytesseract.image_to_string(file_path) #return only the text part
 
     return pytesseract_result
 
-#Google Document API imports
-print("Google Docs Imports")
-from google.api_core.client_options import ClientOptions
-from google.cloud import documentai  # type: ignore
-print("Google Docs Imports done!")
-
+"""
 def google_doc_ai_extract_text(file_path: str):
     project_id = "text-detection-and-extraction"
     location = "eu"
@@ -122,17 +138,12 @@ def google_doc_ai_extract_text(file_path: str):
 
     return extracted_text
 
-#Meta's Nougat imports - to convert other image formats into pdf files
-print("Meta's Nougat Imports")
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from PIL import Image
-print("Meta's Nougat Imports done!")
-
 def meta_nougat_extract_text(file_path: str):
-    return file_path 
+    command = "nougat url -o ."
+    subprocess.run(command, shell=True)
 
-print("Done with imports!!")
+    return file_path 
+"""
 
 list_of_models = [
     "easy_ocr", 

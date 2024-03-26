@@ -19,47 +19,171 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", os.urandom(12))
 socketio = SocketIO(app)
 
-# Function to insert image details into the database
-def insert_image(batch_number, url, text_inside):
+def get_db_connection(
+):
+    """
+    function to establish connection to the database
+    """
     conn = psycopg2.connect(
         host=os.environ.get('DB_HOST'),
         database=os.environ.get('DB_NAME'),
         user=os.environ.get('DB_USERNAME'),
         password=os.environ.get('DB_PASSWORD'))
 
+    return conn
+
+# Function to insert image details into the database
+def insert_image(batch_id, url):
+    conn = get_db_connection()
     c = conn.cursor()
+    
     c.execute(
         """
-        INSERT INTO images (batch_number, url, text_inside) 
-        VALUES (%s, %s, %s)
+        INSERT INTO images (batch_id, url) 
+        VALUES (%s, %s)
         """, 
-        (batch_number, url, text_inside)
+        (batch_id, url)
     )
+
     conn.commit()
     conn.close()
 
 # Function to create a new batch and return its batch number
 def create_batch(num_images = 0):
-    conn = psycopg2.connect(
-        host=os.environ.get('DB_HOST'),
-        database=os.environ.get('DB_NAME'),
-        user=os.environ.get('DB_USERNAME'),
-        password=os.environ.get('DB_PASSWORD'))
-    
+    conn = get_db_connection()
     c = conn.cursor()
+
     c.execute(
         """
         INSERT INTO batches 
-            (created_at, num_images) 
-        VALUES (%s, %s)
-        RETURNING batch_number
+            (num_images) 
+        VALUES (%s)
+        RETURNING batch_id
         """, 
-        (datetime.now(), num_images)
+        (num_images,)
     )
-    batch_number = c.fetchone()[0]  # Fetch the first value of the result tuple
+
+    batch_id = c.fetchone()[0]  # Fetch the first value of the result tuple
     conn.commit()
     conn.close()
-    return batch_number
+
+    return batch_id
+
+def process_images(batch_id):  
+    conn = get_db_connection()
+    c = conn.cursor()
+
+    c.execute(
+        """
+        SELECT 
+            models_list, processed_models_list
+        FROM batches 
+        WHERE batch_id = %s
+        """, 
+        (batch_id,)
+    )
+
+    result = c.fetchone()
+
+    conn.close()
+
+    if result:
+        models_list, processed_models_list = result
+    else:
+        models_list, processed_models_list = [], []
+
+    num_models = len(models_list)
+    num_models_processed = len(processed_models_list)
+
+    while num_models > num_models_processed:
+        #use each model to process all the images in a batch
+        #process the remaining images
+        extraction_status = process_image(batch_id = batch_id, offset = num_processed)
+        if extraction_status == 'OK':
+            num_processed += 1            
+            socketio.emit('image_processed', {'done_num_processed': num_processed}, namespace='/image_processed')
+            print("emitted from socketio")
+        else:
+            break
+    
+    socketio.emit('image_processing_finished', namespace='/image_processed')  # Emit countdown_finished event
+
+def process_image(batch_id, offset, limit = 1):
+    status = 'WAIT'
+
+    conn = get_db_connection()
+    c = conn.cursor()
+
+    c.execute(
+        """
+        SELECT 
+            *
+        FROM images 
+        WHERE batch_id = %s
+        ORDER BY image_id
+        OFFSET %s LIMIT %s
+        """, 
+        (batch_id, offset, limit)
+    )
+
+    result = c.fetchone()
+    
+    if result:
+        img_id, batch_id, url, _ = result
+    else:
+        status = 'NO SUCH RECORD!'
+        return status 
+
+    #get the names of available models from the database:
+    c.execute(
+        """
+        SELECT 
+            model_id, name
+        FROM models
+        WHERE available = true
+        """
+    )
+
+    result = c.fetchall()
+    if result:
+        list_of_models = ocr.list_of_models
+    else:
+        list_of_models = []
+
+    extracted_texts = []
+    for model in list_of_models:
+        extracted_text = ocr.extract_text(file_path = url, model_to_use = model)
+        extracted_texts.append(extract_text)
+
+    print(extracted_texts)
+    
+    c.execute(
+        """
+        UPDATE images 
+        SET 
+            processed = true
+        WHERE 
+            image_id = %s 
+        """, 
+        (extracted_text, img_id)
+    )
+
+    conn.commit()
+
+    c.execute("""
+        UPDATE batches 
+        SET num_processed = num_processed + 1
+        WHERE batch_id = %s 
+        """,
+        (batch_id,)
+    )
+
+    conn.commit()
+
+    conn.close()
+    
+    status = 'OK'
+    return status
 
 #index / home page
 @app.route('/', methods=('GET', 'POST'))
@@ -77,12 +201,12 @@ def upload_images():
     if not images:
         return jsonify({'error': 'No Images Uploaded!!'})
 
-    batch_number = create_batch(len(images))
-    print(f"Batch Number: {batch_number}")
+    batch_id = create_batch(len(images))
     uploaded_paths = []
 
     for image in images:
         # Generate a secure filename and save the image locally
+        #later this will be updated to store the files in the cloud
         filename = secure_filename(image.filename)
         upload_folder = 'image_uploads'  
         os.makedirs(upload_folder, exist_ok=True)
@@ -91,165 +215,57 @@ def upload_images():
         uploaded_paths.append(local_path)
 
         # Insert image details into the database
-        insert_image(batch_number, local_path, "")  
+        insert_image(batch_id, local_path)  
 
-    return jsonify({'batch_number': batch_number})
+    return jsonify({'batch_id': batch_id})
 
-def process_images(batch_number):
-    
-    conn = psycopg2.connect(
-        host=os.environ.get('DB_HOST'),
-        database=os.environ.get('DB_NAME'),
-        user=os.environ.get('DB_USERNAME'),
-        password=os.environ.get('DB_PASSWORD'))
-    
-    c = conn.cursor()
-
-    c.execute(
-        """
-        SELECT 
-            num_images, num_processed
-        FROM batches 
-        WHERE batch_number = %s
-        """, 
-        (batch_number,)
-    )
-
-    result = c.fetchone()
-
-    conn.close()
-
-    if result:
-        num_images, num_processed = result
+@app.route('/select_models/<int:batch_id>', methods = ['GET', 'POST'])
+def select_models(batch_id):
+    if request.method == 'GET':
+        return render_template('select_models.html')
     else:
-        num_images, num_processed = 0, 0
+        models_list = request.form.get('models_list')
+        
+        #save this list of models into corresponding batches record
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        c.execute(
+            """
+            UPDATE batches
+            SET models_list = %s
+            WHERE batch_id = %s
+            """,
+            (models_list, batch_id)
+        )
 
-    while num_images > num_processed:
-        #process the remaining images
-        extraction_status = process_image(batch_number = batch_number, offset = num_processed)
-        if extraction_status == 'OK':
-            num_processed += 1            
-            socketio.emit('image_processed', {'done_num_processed': num_processed}, namespace='/image_processed')
-            print("emitted from socketio")
-        else:
-            break
-    
-    socketio.emit('image_processing_finished', namespace='/image_processed')  # Emit countdown_finished event
+        conn.commit()
+        c.close()
+        conn.close()
 
-def process_image(batch_number, offset, limit = 1):
-    print(f'processing image number: {offset + 1} of batch: {batch_number}')
-    status = 'WAIT'
+        #and then redirect to extract_text page
+        return redirect(url_for('extract_text', batch_id = batch_id))
 
-    conn = psycopg2.connect(
-        host=os.environ.get('DB_HOST'),
-        database=os.environ.get('DB_NAME'),
-        user=os.environ.get('DB_USERNAME'),
-        password=os.environ.get('DB_PASSWORD'))
-    
-    c = conn.cursor()
-
-    c.execute(
-        """
-        SELECT 
-            *
-        FROM images 
-        WHERE batch_number = %s
-        ORDER BY id
-        OFFSET %s LIMIT %s
-        """, 
-        (batch_number, offset, limit)
-    )
-
-    result = c.fetchone()
-    
-    if result:
-        img_id, batch_number, url, _, _ = result
-    else:
-        status = 'NO SUCH RECORD!'
-        return status 
-
-    print(f"url of the next img to be processed: {url}")
-
-    #use the util methods to actually extract the text here 
-    list_of_models = ocr.list_of_models
-
-    extracted_texts = []
-    for model in list_of_models:
-        extracted_text = ocr.extract_text(file_path = url, model_to_use = model)
-        extracted_texts.append(extract_text)
-
-    print(extracted_texts)
-    
-    c.execute(
-        """
-        UPDATE images 
-        SET 
-            processed = true,
-            text_inside = %s
-        WHERE 
-            id = %s 
-        AND 
-            batch_number = %s 
-        """, 
-        (extracted_text, img_id, batch_number)
-    )
-
-    conn.commit()
-
-    c.execute("""
-        UPDATE batches 
-        SET num_processed = num_processed + 1
-        WHERE batch_number = %s 
-        """,
-        (batch_number,)
-    )
-
-    conn.commit()
-
-    conn.close()
-    
-    status = 'OK'
-    return status
-
-@socketio.on('connect', namespace='/image_processed')
-def connect():
-    print('Client connected')
-    batch_number = request.args.get('batch_number', type=int)  # Get the batch_number parameter from the connection URL
-    
-    print(f"making a call to process images for batch: {batch_number}")
-
-    img_processing_thread = threading.Thread(target=process_images, args = (batch_number,))
-    img_processing_thread.daemon = True
-    img_processing_thread.start()
-
-@socketio.on('disconnect', namespace='/image_processed')
-def disconnect():
-    print('Client disconnected')
-
-@app.route('/extract_text/<int:batch_number>')
-def extract_text(batch_number):
+@app.route('/extract_text/<int:batch_id>')
+def extract_text(batch_id):
     # Your text extraction logic here
     #fetch how many images for this batch has been processed: 
     #if done then redirect to results page
     #if some images remaining start processing them one by one and send the results to user 
     #and update the database as well.
 
-    conn = psycopg2.connect(
-        host=os.environ.get('DB_HOST'),
-        database=os.environ.get('DB_NAME'),
-        user=os.environ.get('DB_USERNAME'),
-        password=os.environ.get('DB_PASSWORD'))
+    conn = get_db_connection()
     
     c = conn.cursor()
 
     c.execute(
         """
         SELECT 
-            num_images, num_processed
+            cardinality(models_list), cardinality(processed_models_list)
         FROM batches 
-        WHERE batch_number = %s
+        WHERE batch_id = %s
         """, 
-        (batch_number,)
+        (batch_id,)
     )
 
     result = c.fetchone()
@@ -257,13 +273,13 @@ def extract_text(batch_number):
     conn.close()
 
     if result:
-        num_images, num_processed = result
-        print(f"Result: {result}, Num Images: {num_images}, Num Processed: {num_processed}")
+        num_models, num_models_processed = result
+        print(f"Result: {result}, Num Models: {num_models}, Num Models Processed: {num_models_processed}")
 
-        if num_images > num_processed:
+        if num_models > num_models_processed:
             return render_template(
                 'text_extraction_progress.html', 
-                batch_number = batch_number
+                batch_id = batch_id
             )
         else:
             #we will just redirect to the results page.
@@ -271,3 +287,15 @@ def extract_text(batch_number):
     else:
         #no such record exists!!
         return redirect(url_for('index'))
+
+@socketio.on('connect', namespace='/image_processed')
+def connect():
+    print('Client connected')
+    batch_id = request.args.get('batch_id', type=int)  # Get the batch_id parameter from the connection URL
+    img_processing_thread = threading.Thread(target=process_images, args = (batch_id,))
+    img_processing_thread.daemon = True
+    img_processing_thread.start()
+
+@socketio.on('disconnect', namespace='/image_processed')
+def disconnect():
+    print('Client disconnected')

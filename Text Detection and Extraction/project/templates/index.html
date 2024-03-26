@@ -159,10 +159,12 @@
             .then(response => response.json())
             .then(data => {
                 console.log(data);
-                console.log(data.batch_number);
-                var batch_number = data.batch_number || 0;
+                console.log(data.batch_id);
+                var batch_id = data.batch_id || 0;
                 //send these paths data to another page for processing
-                window.location = "/extract_text/" + batch_number;
+                //next step will be to select the models for this batch.
+                window.location = "/select_models/" + batch_id;
+                //window.location = "/extract_text/" + batch_id;
             })
             .catch(error => {
                 console.error('Error uploading image:', error);
