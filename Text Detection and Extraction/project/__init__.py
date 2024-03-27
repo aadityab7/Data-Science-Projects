@@ -19,77 +19,125 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", os.urandom(12))
 socketio = SocketIO(app)
 
-def get_db_connection(
-):
+def execute_query(query: str, query_type: str = 'fetchone', args = None):
+    conn = None
+    cursor = None
+    
+    try:
+        conn = psycopg2.connect(
+            host=os.environ.get('DB_HOST'),
+            database=os.environ.get('DB_NAME'),
+            user=os.environ.get('DB_USERNAME'),
+            password=os.environ.get('DB_PASSWORD')
+        )
+
+        cursor = conn.cursor()
+
+        if args:
+            cursor.execute(query, args)
+        else:
+            cursor.execute(query)
+        
+        if query_type == 'fetchone':
+            result = cursor.fetchone()
+        elif query_type == 'fetchall':
+            result = cursor.fetchall()
+        else:
+            result = 'OK'
+
+        conn.commit()
+
+        return result
+    except psycopg2.Error as e:
+        print("Database error:", e)
+        return None
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+def create_batch(num_images: int = 0):
     """
-    function to establish connection to the database
+    Function to create a new batch and return its batch number
     """
-    conn = psycopg2.connect(
-        host=os.environ.get('DB_HOST'),
-        database=os.environ.get('DB_NAME'),
-        user=os.environ.get('DB_USERNAME'),
-        password=os.environ.get('DB_PASSWORD'))
-
-    return conn
-
-# Function to create a new batch and return its batch number
-def create_batch(num_images = 0):
-    conn = get_db_connection()
-    c = conn.cursor()
-
-    c.execute(
-        """
+    query = """
         INSERT INTO batches 
             (num_images) 
         VALUES (%s)
         RETURNING batch_id
-        """, 
-        (num_images,)
-    )
+    """
+    args = (num_images,)
 
-    batch_id = c.fetchone()[0]  # Fetch the first value of the result tuple
-    conn.commit()
-    conn.close()
+    result = execute_query(query = query, query_type = 'fetchone', args = args)
+    batch_id = result[0]
 
     return batch_id
 
-# Function to insert image details into the database
-def insert_image(batch_id, url):
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    c.execute(
-        """
+def insert_image(batch_id: int, url: str):
+    """
+    Function to insert image details into the database
+    """
+    query = """
         INSERT INTO images (batch_id, url) 
         VALUES (%s, %s)
-        """, 
-        (batch_id, url)
-    )
+    """
 
-    conn.commit()
-    conn.close()
+    args = (batch_id, url)
 
+    execute_query(query = query, query_type = 'commit', args = args)
 
-def check_if_image_processed_by_model(image_id: int, model_id: int):
-    return False
+def num_images_processed_by_model(model_id: int, batch_id: int):
+    query = """
+        SELECT 
+            num_processed
+        FROM batch_model_progress 
+        WHERE 
+            batch_id = %s
+            AND
+            model_id = %s
+    """
 
-def process_images(batch_id):  
-    conn = get_db_connection()
-    c = conn.cursor()
+    args = (batch_id, model_id)
 
-    c.execute(
+    result = execute_query(query = query, query_type = 'fetchone', args = args)
+
+    if result:
+        num_images_processed = result[0]
+    else:
+        # If no record exists, insert a new record with default values
+        query = """
+            INSERT INTO 
+            batch_model_progress 
+                (batch_id, model_id)
+            VALUES 
+                (%s, %s)
         """
+
+        args = (batch_id, model_id)
+        
+        execute_query(query = query, query_type = 'commit', args = args)
+
+        # Since no record was found, set num_images_processed to the default value
+        num_images_processed = 0
+
+    return num_images_processed
+
+def process_images(batch_id: int):  
+    query = """
         SELECT 
             models_list, processed_models_list
         FROM batches 
         WHERE batch_id = %s
-        """, 
-        (batch_id,)
-    )
+    """ 
 
-    result = c.fetchone()
+    args = (batch_id,)
 
-    conn.close()
+    result = execute_query(
+                query = query, 
+                query_type = 'fetchone', 
+                args = args
+            )
 
     if result:
         models_list, processed_models_list = result
@@ -99,126 +147,177 @@ def process_images(batch_id):
     num_models = len(models_list)
     num_models_processed = len(processed_models_list)
 
-    conn = get_db_connection()
-    c = conn.cursor()
-
-    c.execute(
-        """
+   query = """
         SELECT 
             image_id, url
         FROM images 
         WHERE batch_id = %s
         ORDER BY image_id
-        """, 
-        (batch_id,)
-    )
+    """
 
-    list_of_images = c.fetchall()
+    args = (batch_id,)
 
-    print(f"list_of_images: {list_of_images}")
-    print(f"models_list: {models_list}")
-    print(f"processed_models_list: {processed_models_list}")
+    list_of_images = execute_query(
+                        query = query, 
+                        query_type = 'fetchall', 
+                        args = args
+                    )
 
     for model_id in models_list:
         if model_id not in processed_models_list:
+            
+            query = """
+                SELECT 
+                    name, available
+                FROM models
+                WHERE model_id = %s
+            """
+            
+            args = (model_id,)
+
+            result = execute_query(
+                        query = query, 
+                        query_type = 'fetchone', 
+                        args = args
+                    )
+            
+            if result:
+                model_name, model_available = result
+            else:
+                model_name, model_available = "", False
+
+            if not model_available:
+                #move on from this model and process with others
+                continue
+
             #use each model to process all the images in a batch
-            for image_id, image_url in list_of_images:
-                #check if this image has been processed by this model
-                #process the remaining images
-                #pass the image_id and model_id to process_image
-                
-                print(image_id, image_url, model_id)
-                #we can also use the batch_model_progress table 
-                #to check how many images have already been processed by this model
-                check_if_image_processed_by_model(image_id = image_id, model_id = model_id)
+            #check how many images have already been processed 
+            #by this model for this batch
+            num_images_processed =  num_images_processed_by_model(
+                                        model_id = model_id, 
+                                        batch_id = batch_id
+                                    )
 
-                #extraction_status = process_image(image_id = image_id, image_url = image_url, model_id = model_id)
-                #extraction_status = process_image(batch_id = batch_id, offset = num_processed)
+            for image_id, image_url in list_of_images[num_images_processed:]:
+                #pass the image_id, image_url and model_id to process_image
                 
-                # if extraction_status == 'OK':
-                #     num_processed += 1            
-                #     socketio.emit('image_processed', {'done_num_processed': num_processed}, namespace='/image_processed')
-                # else:
-                #     break
-    
-    socketio.emit('image_processing_finished', namespace='/image_processed')  # Emit countdown_finished event
+                print(image_id, image_url, model_id, model_name)
 
-def process_image(batch_id, offset, limit = 1):
+                extraction_status = process_image(
+                    image_id = image_id, 
+                    image_url = image_url, 
+                    model_id = model_id,
+                    model_name = model_name
+                )
+
+                if extraction_status == 'OK':
+
+                    #update the num_processed of batch for this model
+                    #as another image is processed 
+                    query = """
+                        UPDATE 
+                        batch_model_progress
+                        SET num_processed = num_processed + 1
+                        WHERE
+                            batch_id = %s
+                            AND 
+                            model_id = %s
+                    """
+
+                    args = (batch_id, model_id)
+
+                    execute_query(
+                        query = query, 
+                        query_type = "commit", 
+                        args = args
+                    )
+                                
+                    socketio.emit(
+                                   'image_processed', 
+                                    {'image_processed': image_url}, 
+                                    namespace='/image_processed'
+                                )
+        
+            #current model_id completed processing 
+            #add this to the processed_models_list in db   
+            query = """
+                UPDATE batches
+                SET processed_models_list = array_append(
+                                                processed_models_list, 
+                                                %s
+                                            )
+                WHERE batch_id = %s
+            """
+
+            args = (model_id, batch_id)
+
+            execute_query(query = query, query_type = 'commit', args = args)
+
+    # Emit countdown_finished event
+    socketio.emit('image_processing_finished', namespace='/image_processed')  
+
+def process_image(
+    image_id: int, 
+    image_url: str, 
+    model_id: int,
+    model_name: str
+):
     status = 'WAIT'
-
-    conn = get_db_connection()
-    c = conn.cursor()
-
-    c.execute(
-        """
-        SELECT 
-            *
-        FROM images 
-        WHERE batch_id = %s
-        ORDER BY image_id
-        OFFSET %s LIMIT %s
-        """, 
-        (batch_id, offset, limit)
-    )
-
-    result = c.fetchone()
     
-    if result:
-        img_id, batch_id, url, _ = result
-    else:
-        status = 'NO SUCH RECORD!'
-        return status 
-
-    #get the names of available models from the database:
-    c.execute(
-        """
-        SELECT 
-            model_id, name
-        FROM models
-        WHERE available = true
-        """
+    extracted_text = ocr.extract_text(
+        file_path = image_url, 
+        model_to_use = model_name
     )
 
-    result = c.fetchall()
-    if result:
-        list_of_models = ocr.list_of_models
-    else:
-        list_of_models = []
-
-    extracted_texts = []
-    for model in list_of_models:
-        extracted_text = ocr.extract_text(file_path = url, model_to_use = model)
-        extracted_texts.append(extract_text)
-
-    print(extracted_texts)
+    print(f"extracted_text: {extracted_text}")
     
-    c.execute(
-        """
-        UPDATE images 
-        SET 
-            processed = true
-        WHERE 
-            image_id = %s 
-        """, 
-        (extracted_text, img_id)
-    )
+    #text has been extracted now update the database
+    #store the extracted text for image by the model
+    query = """
+        INSERT INTO
+        extracted_texts
+            (model_id, image_id, extracted_text)
+        VALUES
+            (%s, %s, %s)
+    """
 
-    conn.commit()
+    args = (model_id, image_id, extracted_text)
 
-    c.execute("""
-        UPDATE batches 
-        SET num_processed = num_processed + 1
-        WHERE batch_id = %s 
-        """,
-        (batch_id,)
-    )
+    execute_query(query = query, query_type = 'commit', args = args)
 
-    conn.commit()
-
-    conn.close()
-    
     status = 'OK'
     return status
+
+def store_models_for_batch(models_list: list, batch_id: int):
+    query = """
+        SELECT 
+            name, model_id
+        FROM models
+    """
+    
+    list_of_models = execute_query(query = query, query_type = "fetchall")
+
+    if not list_of_models:
+        list_of_models = []
+
+    model_id_name_mapping = dict(list_of_models)
+    model_id_list = []
+
+    for model_name in models_list:
+        print(model_name)
+        model_id = model_id_name_mapping.get(model_name, -1)
+        print(model_id)
+        if model_id != -1:
+            model_id_list.append(model_id)
+
+    query = """
+        UPDATE batches
+        SET models_list = %s
+        WHERE batch_id = %s
+    """
+    args = (model_id_list, batch_id)
+    
+    execute_query(query = query, query_type = 'commit', args = args)
 
 #index / home page
 @app.route('/', methods=('GET', 'POST'))
@@ -254,45 +353,6 @@ def upload_images():
 
     return jsonify({'batch_id': batch_id})
 
-def store_models_for_batch(models_list, batch_id):
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    c.execute(
-        """
-        SELECT 
-            name, model_id
-        FROM models
-        """
-    )
-
-    list_of_models = c.fetchall()
-    if not list_of_models:
-        list_of_models = []
-
-    model_id_name_mapping = dict(list_of_models)
-    model_id_list = []
-
-    for model_name in models_list:
-        print(model_name)
-        model_id = model_id_name_mapping.get(model_name, -1)
-        print(model_id)
-        if model_id != -1:
-            model_id_list.append(model_id)
-
-    c.execute(
-        """
-        UPDATE batches
-        SET models_list = %s
-        WHERE batch_id = %s
-        """,
-        (model_id_list, batch_id)
-    )
-
-    conn.commit()
-    c.close()
-    conn.close()
-
 @app.route('/select_models/<int:batch_id>', methods = ['GET', 'POST'])
 def select_models(batch_id):
     if request.method == 'GET':
@@ -312,30 +372,24 @@ def extract_text(batch_id):
     # Your text extraction logic here
     #fetch how many images for this batch has been processed: 
     #if done then redirect to results page
-    #if some images remaining start processing them one by one and send the results to user 
+    #if some images remaining start processing them one by one 
+    #and send the results to user 
     #and update the database as well.
 
-    conn = get_db_connection()
-    
-    c = conn.cursor()
-
-    c.execute(
-        """
+    query = """
         SELECT 
             cardinality(models_list), cardinality(processed_models_list)
         FROM batches 
         WHERE batch_id = %s
-        """, 
-        (batch_id,)
-    )
+    """ 
+    args = (batch_id,)
 
-    result = c.fetchone()
-
-    conn.close()
+    result = execute_query(query = query, query_type = 'fetchone', args = args)
 
     if result:
         num_models, num_models_processed = result
-        print(f"Result: {result}, Num Models: {num_models}, Num Models Processed: {num_models_processed}")
+        print(f"Result: {result}, Num Models: {num_models}\
+            , Num Models Processed: {num_models_processed}")
 
         if num_models > num_models_processed:
             return render_template(
@@ -352,8 +406,12 @@ def extract_text(batch_id):
 @socketio.on('connect', namespace='/image_processed')
 def connect():
     print('Client connected')
-    batch_id = request.args.get('batch_id', type=int)  # Get the batch_id parameter from the connection URL
-    img_processing_thread = threading.Thread(target=process_images, args = (batch_id,))
+    # Get the batch_id parameter from the connection URL
+    batch_id = request.args.get('batch_id', type=int)  
+    img_processing_thread = threading.Thread(
+        target=process_images, 
+        args = (batch_id,)
+    )
     img_processing_thread.daemon = True
     img_processing_thread.start()
 
