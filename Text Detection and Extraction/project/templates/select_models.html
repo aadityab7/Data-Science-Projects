@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Models</title>
+</head>
+<body>
+    <h2>Select Models for Processing</h2>
+    <form action="/select_models/{{batch_id}}" method="post">
+        {% for model in models_list %}
+        <label for="{{ model[0]}}">
+            <input type="checkbox" id="{{ model[0] }}" name="model" value="{{ model[0]}}" {% if not model[1] %}disabled{% endif %}>
+            {{ model[0] }} {% if not model[1] %}(Inactive){% endif %}
+        </label><br>
+        {% endfor %}
+        <br>
+        <input type="submit" value="Process Selected Models">
+    </form>
+</body>
+</html>

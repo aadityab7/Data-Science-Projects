@@ -10,7 +10,7 @@ import random
 import time
 import threading
 
-#from utils import ocr
+from utils import ocr
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -147,7 +147,7 @@ def process_images(batch_id: int):
     num_models = len(models_list)
     num_models_processed = len(processed_models_list)
 
-   query = """
+    query = """
         SELECT 
             image_id, url
         FROM images 
@@ -163,7 +163,9 @@ def process_images(batch_id: int):
                         args = args
                     )
 
-    for model_id in models_list:
+    num_images = len(list_of_images)
+
+    for model_idx, model_id in enumerate(models_list):
         if model_id not in processed_models_list:
             
             query = """
@@ -198,7 +200,7 @@ def process_images(batch_id: int):
                                         batch_id = batch_id
                                     )
 
-            for image_id, image_url in list_of_images[num_images_processed:]:
+            for image_idx, (image_id, image_url) in enumerate(list_of_images[num_images_processed:]):
                 #pass the image_id, image_url and model_id to process_image
                 
                 print(image_id, image_url, model_id, model_name)
@@ -231,13 +233,21 @@ def process_images(batch_id: int):
                         query_type = "commit", 
                         args = args
                     )
+
+                    progress_update_text = f"Processing with model: {model_name}, Images Processed: {image_idx + num_images_processed + 1} / {num_images}"
                                 
                     socketio.emit(
                                    'image_processed', 
-                                    {'image_processed': image_url}, 
+                                    {'progress_update_text': progress_update_text}, 
                                     namespace='/image_processed'
                                 )
-        
+            #end of image for loop
+
+            socketio.emit(
+               'model_process_complete', 
+                namespace='/image_processed'
+            )
+
             #current model_id completed processing 
             #add this to the processed_models_list in db   
             query = """
@@ -252,6 +262,7 @@ def process_images(batch_id: int):
             args = (model_id, batch_id)
 
             execute_query(query = query, query_type = 'commit', args = args)
+    #end of models for loop
 
     # Emit countdown_finished event
     socketio.emit('image_processing_finished', namespace='/image_processed')  
@@ -356,11 +367,28 @@ def upload_images():
 @app.route('/select_models/<int:batch_id>', methods = ['GET', 'POST'])
 def select_models(batch_id):
     if request.method == 'GET':
-        return render_template('select_models.html')
+        #get the model names and availabilty status from the database
+        query = """
+            SELECT 
+                name, available
+            FROM models
+        """
+
+        result = execute_query(query = query, query_type = 'fetchall')
+
+        if result:
+            models_list = result
+        else:
+            models_list = []
+
+        return render_template(
+                    'select_models.html', 
+                    models_list = models_list,
+                    batch_id = batch_id
+                )
     else:
-        data = request.get_json() 
-        models_list = data.get('models_list')
-        
+        models_list = request.form.getlist('model')
+            
         #save this list of models into corresponding batches record
         store_models_for_batch(models_list = models_list, batch_id = batch_id)
 

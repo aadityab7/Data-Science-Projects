@@ -1,8 +1,8 @@
--- DROP TABLE IF EXISTS batches CASCADE;                    
--- DROP TABLE IF EXISTS images CASCADE;                     
--- DROP TABLE IF EXISTS models CASCADE;            
--- DROP TABLE IF EXISTS extracted_texts CASCADE;  
--- DROP TABLE IF EXISTS batch_model_progress CASCADE;            
+DROP TABLE IF EXISTS batches CASCADE;                    
+DROP TABLE IF EXISTS images CASCADE;                     
+DROP TABLE IF EXISTS models CASCADE;            
+DROP TABLE IF EXISTS extracted_texts CASCADE;  
+DROP TABLE IF EXISTS batch_model_progress CASCADE;            
 
 CREATE TABLE IF NOT EXISTS batches (
     batch_id SERIAL PRIMARY KEY, 
@@ -44,7 +44,7 @@ INSERT INTO models
 VALUES 
     ('easy_ocr', true), 
     ('keras_ocr', false), 
-    ('pix2text', true), 
+    ('pix2text', false), 
     ('pytesseract', true), 
     ('google_document_ai', false),
     ('meta_nougat', false);

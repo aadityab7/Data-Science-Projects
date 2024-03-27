@@ -15,15 +15,19 @@ import keras_ocr
 print("Keras OCR Imports done!")
 """
 
+"""
 #pix2text imports ~ 2.6 minutes
 print("Pix2Text Imports")
 from pix2text import Pix2Text, merge_line_texts
 print("Pix2Text Imports done!")
+"""
 
 #PyTesseract imports ~ 5 seconds
 print("PyTesseract Imports")
 import pytesseract
 print("PyTesseract Imports done!")
+
+pytesseract.pytesseract.tesseract_cmd = 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
 """
 #Google Document API imports ~ 30 seconds
@@ -51,7 +55,7 @@ def easy_ocr_extract_text(file_path: str):
 
     return easy_ocr_result
 
-def keras_ocr_extract_text(file_path: str):
+"""def keras_ocr_extract_text(file_path: str):
     # keras-ocr will automatically download pretrained
     # weights for the detector and recognizer.
     pipeline = keras_ocr.pipeline.Pipeline()
@@ -66,14 +70,14 @@ def keras_ocr_extract_text(file_path: str):
         keras_ocr_result.append(prediction[0])
 
     return keras_ocr_result
-
-def pix2text_extract_text(file_path: str):
+"""
+"""def pix2text_extract_text(file_path: str):
     p2t = Pix2Text(analyzer_config=dict(model_name='mfd'))
 
     pix2text_result = p2t.recognize(file_path)
     pix2text_result = merge_line_texts(pix2text_result, auto_line_break=True) #return only the text part
 
-    return pix2text_result
+    return pix2text_result"""
 
 def pytesseract_extract_text(file_path: str):
     #pytesseract_result = pytesseract.image_to_boxes(file_path)
@@ -147,8 +151,8 @@ def meta_nougat_extract_text(file_path: str):
 
 list_of_models = [
     "easy_ocr", 
-    "keras_ocr",
-    "pix2text",
+    #"keras_ocr",
+    #"pix2text",
     "pytesseract",
     #"google_document_ai",
     #"meta_nougat"
@@ -162,15 +166,19 @@ def extract_text(file_path: str, model_to_use: str = ""):
     if model_to_use == "easy_ocr":
         extracted_text = easy_ocr_extract_text(file_path)
     elif model_to_use == "keras_ocr":
-        extracted_text = keras_ocr_extract_text(file_path)
+        pass
+        # extracted_text = keras_ocr_extract_text(file_path)
     elif model_to_use ==  "pix2text":
-        extracted_text = pix2text_extract_text(file_path)
+        pass
+        #extracted_text = pix2text_extract_text(file_path)
     elif model_to_use == "pytesseract":
         extracted_text = pytesseract_extract_text(file_path)
     elif model_to_use == "google_document_ai":
-        extracted_text = google_doc_ai_extract_text(file_path)
+        pass
+        # extracted_text = google_doc_ai_extract_text(file_path)
     elif model_to_use == "meta_nougat":
-        extracted_text = meta_nougat_extract_text(file_path)
+        pass
+        # extracted_text = meta_nougat_extract_text(file_path)
 
     print("Result : ", extracted_text)
 
