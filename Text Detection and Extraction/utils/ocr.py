@@ -1,11 +1,12 @@
 #does import time vary depending upon the drive? Nope
 
 print("Starting Imports")
-
+"""
 #Easy OCR imports - should take approx. 15 seconds to import
 print("Easy OCR Imports")
 import easyocr
 print("Easy OCR Imports done!")
+"""
 
 """
 #keras_ocr imports ~ 9 minutes to import
@@ -22,12 +23,14 @@ from pix2text import Pix2Text, merge_line_texts
 print("Pix2Text Imports done!")
 """
 
+"""
 #PyTesseract imports ~ 5 seconds
 print("PyTesseract Imports")
 import pytesseract
 print("PyTesseract Imports done!")
 
 pytesseract.pytesseract.tesseract_cmd = 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
+"""
 
 """
 #Google Document API imports ~ 30 seconds
@@ -35,7 +38,9 @@ print("Google Docs Imports")
 from google.api_core.client_options import ClientOptions
 from google.cloud import documentai  # type: ignore
 print("Google Docs Imports done!")
+"""
 
+"""
 #Meta's Nougat imports - to convert other image formats into pdf files ~ 4 seconds
 print("Meta's Nougat Imports")
 from reportlab.lib.pagesizes import letter
@@ -55,7 +60,7 @@ def easy_ocr_extract_text(file_path: str):
 
     return easy_ocr_result
 
-"""def keras_ocr_extract_text(file_path: str):
+def keras_ocr_extract_text(file_path: str):
     # keras-ocr will automatically download pretrained
     # weights for the detector and recognizer.
     pipeline = keras_ocr.pipeline.Pipeline()
@@ -70,14 +75,14 @@ def easy_ocr_extract_text(file_path: str):
         keras_ocr_result.append(prediction[0])
 
     return keras_ocr_result
-"""
-"""def pix2text_extract_text(file_path: str):
+
+def pix2text_extract_text(file_path: str):
     p2t = Pix2Text(analyzer_config=dict(model_name='mfd'))
 
     pix2text_result = p2t.recognize(file_path)
     pix2text_result = merge_line_texts(pix2text_result, auto_line_break=True) #return only the text part
 
-    return pix2text_result"""
+    return pix2text_result
 
 def pytesseract_extract_text(file_path: str):
     #pytesseract_result = pytesseract.image_to_boxes(file_path)
@@ -85,7 +90,6 @@ def pytesseract_extract_text(file_path: str):
 
     return pytesseract_result
 
-"""
 def google_doc_ai_extract_text(file_path: str):
     project_id = "text-detection-and-extraction"
     location = "eu"
@@ -147,18 +151,18 @@ def meta_nougat_extract_text(file_path: str):
     subprocess.run(command, shell=True)
 
     return file_path 
-"""
 
 list_of_models = [
     "easy_ocr", 
-    #"keras_ocr",
-    #"pix2text",
+    "keras_ocr",
+    "pix2text",
     "pytesseract",
-    #"google_document_ai",
-    #"meta_nougat"
+    "google_document_ai",
+    "meta_nougat"
 ]
 
 def extract_text(file_path: str, model_to_use: str = ""):
+    model_to_use = "none"
     print(f"Extracting text for file: {file_path} using model: {model_to_use}")
 
     extracted_text = ""
@@ -166,19 +170,17 @@ def extract_text(file_path: str, model_to_use: str = ""):
     if model_to_use == "easy_ocr":
         extracted_text = easy_ocr_extract_text(file_path)
     elif model_to_use == "keras_ocr":
-        pass
-        # extracted_text = keras_ocr_extract_text(file_path)
+        extracted_text = keras_ocr_extract_text(file_path)
     elif model_to_use ==  "pix2text":
-        pass
-        #extracted_text = pix2text_extract_text(file_path)
+        extracted_text = pix2text_extract_text(file_path)
     elif model_to_use == "pytesseract":
         extracted_text = pytesseract_extract_text(file_path)
     elif model_to_use == "google_document_ai":
-        pass
-        # extracted_text = google_doc_ai_extract_text(file_path)
+        extracted_text = google_doc_ai_extract_text(file_path)
     elif model_to_use == "meta_nougat":
-        pass
-        # extracted_text = meta_nougat_extract_text(file_path)
+        extracted_text = meta_nougat_extract_text(file_path)
+    else:
+        extracted_text = file_path
 
     print("Result : ", extracted_text)
 

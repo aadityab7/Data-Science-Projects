@@ -1,18 +1,18 @@
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from werkzeug.utils import secure_filename
 import psycopg2
+from flask_socketio import SocketIO, emit
+from dotenv import load_dotenv
+
 import json
 import os
 from datetime import datetime
-
-from flask_socketio import SocketIO, emit
 import random
 import time
 import threading
 
 from utils import ocr
 
-from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
