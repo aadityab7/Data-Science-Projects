@@ -1,0 +1,4 @@
+.venv/
+flask_session/
+image_uploads/
+__pycache__
