@@ -1,6 +1,0 @@
-flask
-psycopg2
-flask-socketio
-python-dotenv
-gunicorn
-easyocr
