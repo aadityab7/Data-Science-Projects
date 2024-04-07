@@ -1,12 +1,12 @@
 #does import time vary depending upon the drive? Nope
-
+"""
 print("Starting Imports")
 
 #Easy OCR imports - should take approx. 15 seconds to import
 print("Easy OCR Imports")
 import easyocr
 print("Easy OCR Imports done!")
-
+"""
 """
 #keras_ocr imports ~ 9 minutes to import
 print("Keras OCR Imports")
@@ -49,7 +49,7 @@ import subprocess
 print("Meta's Nougat Imports done!")
 """
 
-print("Done with imports!!")
+# print("Done with imports!!")
 
 def easy_ocr_extract_text(file_path: str):
     reader = easyocr.Reader(['en'])
@@ -161,8 +161,7 @@ list_of_models = [
 ]
 
 def extract_text(file_path: str, model_to_use: str = ""):
-    if model_to_use != "easy_ocr":
-        model_to_use = "none"
+    model_to_use = "none"
         
     print(f"Extracting text for file: {file_path} using model: {model_to_use}")
 

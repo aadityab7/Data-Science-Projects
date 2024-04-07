@@ -17,5 +17,6 @@ RUN pip install -r requirements.txt --no-cache-dir
 ADD . /code/
 
 # Specify the command to run on container start
-EXPOSE 8000 2222
-#CMD ["python", "/code/app.py", "runserver", "0.0.0.0:8000"]
+EXPOSE 8000
+
+CMD ["python", "/code/app.py", "runserver", "0.0.0.0:8000"]

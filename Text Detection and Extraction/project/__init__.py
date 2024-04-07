@@ -1,3 +1,4 @@
+print("doing imports!")
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from werkzeug.utils import secure_filename
 import psycopg2
@@ -12,6 +13,7 @@ import time
 import threading
 
 from utils import ocr
+print("imports complete!!")
 
 load_dotenv()
 
@@ -28,7 +30,8 @@ def execute_query(query: str, query_type: str = 'fetchone', args = None):
             host=os.environ.get('DB_HOST'),
             database=os.environ.get('DB_NAME'),
             user=os.environ.get('DB_USERNAME'),
-            password=os.environ.get('DB_PASSWORD')
+            password=os.environ.get('DB_PASSWORD'),
+            sslmode = "require"
         )
 
         cursor = conn.cursor()
@@ -205,7 +208,7 @@ def process_images(batch_id: int):
                 
                 print(image_id, image_url, model_id, model_name)
 
-                extraction_status = process_image(
+                extraction_status, extracted_text = process_image(
                     image_id = image_id, 
                     image_url = image_url, 
                     model_id = model_id,
@@ -234,8 +237,10 @@ def process_images(batch_id: int):
                         args = args
                     )
 
-                    progress_update_text = f"Processing with model: {model_name}, Images Processed: {image_idx + num_images_processed + 1} / {num_images}"
-                                
+                    progress_update_text = f"Processing with model: {model_name}"
+                    progress_update_text += f"\nImages Processed: {image_idx + num_images_processed + 1} / {num_images}"
+                    progress_update_text += f"\nCurrent Text Extracted: {extracted_text}"
+                    
                     socketio.emit(
                                    'image_processed', 
                                     {'progress_update_text': progress_update_text}, 
@@ -297,7 +302,7 @@ def process_image(
     execute_query(query = query, query_type = 'commit', args = args)
 
     status = 'OK'
-    return status
+    return status, extracted_text
 
 def store_models_for_batch(models_list: list, batch_id: int):
     query = """
