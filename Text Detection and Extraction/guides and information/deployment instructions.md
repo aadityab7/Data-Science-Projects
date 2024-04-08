@@ -21,6 +21,9 @@ Example: `az account set --subscription "Free Trial"`
 `docker build --tag base-textext-docker-2 .`
 2. To run the docker image locally:
 `docker run -d -p 8000:8000 base-textext-docker-2`
+3. To stop docker container:
+`docker stop <container-name>`
+(here container-name is the return value that gets printed when we start the container)
 
 # To create a PostgreSQL Database on Cloud
 1. Create a Azure database for PostgreSQL flexible server with server name and password 
@@ -32,14 +35,16 @@ Example: `az account set --subscription "Free Trial"`
 
 # To Build and deploy Web App as a container on Azure
 1. create Resource group:
-`az group create --name web-app-simple-rg --location eastus`
+`az group create --name textext-testing-rg --location eastus`
 
 2. Create an Azure Container Registry:
-`az acr create --resource-group web-app-simple-rg --name textexttest --sku Basic --admin-enabled true`
+`az acr create --resource-group textext-testing-rg --name testtextextregistry --sku Basic --admin-enabled true`
 
 3. Save the password to a variable:
-``for /f "usebackq tokens=*" %i in (`az acr credential show --resource-group web-app-simple-rg --name textexttest --query "passwords[?name == 'password'].value" --output tsv`) do set ACR_PASSWORD=%i``
+``for /f "usebackq tokens=*" %i in (`az acr credential show --resource-group textext-testing-rg --name testtextextregistry --query "passwords[?name == 'password'].value" --output tsv`) do set ACR_PASSWORD=%i``
 
-4. Build the image in Azure Container Registry:
-`az acr build --resource-group web-app-simple-rg --registry textexttest --image webappsimple:latest .`
+4. To print / view password:
+`echo %ACR_PASSWORD%`
 
+5. Build the image in Azure Container Registry:
+`az acr build --resource-group textext-testing-rg --registry testtextextregistry --image webappsimple:latest .`

@@ -2,3 +2,5 @@
 flask_session/
 image_uploads/
 __pycache__
+.git*
+**/*.pyc
