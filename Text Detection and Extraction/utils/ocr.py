@@ -1,55 +1,64 @@
+list_of_models = [
+    "easy_ocr", 
+    "keras_ocr",
+    "pix2text",
+    "pytesseract",
+    "google_document_ai",
+    "meta_nougat"
+]
+
+list_of_active_models = [
+    ""
+]
+
 #does import time vary depending upon the drive? Nope
-"""
+
 print("Starting Imports")
 
-#Easy OCR imports - should take approx. 15 seconds to import
-print("Easy OCR Imports")
-import easyocr
-print("Easy OCR Imports done!")
-"""
-"""
-#keras_ocr imports ~ 9 minutes to import
-print("Keras OCR Imports")
-import matplotlib.pyplot as plt
-import keras_ocr
-print("Keras OCR Imports done!")
-"""
+if "easy_ocr" in list_of_active_models: 
+    #Easy OCR imports - should take approx. 15 seconds to import
+    print("Easy OCR Imports")
+    import easyocr
+    print("Easy OCR Imports done!")
 
-"""
-#pix2text imports ~ 2.6 minutes
-print("Pix2Text Imports")
-from pix2text import Pix2Text, merge_line_texts
-print("Pix2Text Imports done!")
-"""
+if "keras_ocr" in list_of_active_models:
+    #keras_ocr imports ~ 9 minutes to import
+    print("Keras OCR Imports")
+    import matplotlib.pyplot as plt
+    import keras_ocr
+    print("Keras OCR Imports done!")
 
-"""
-#PyTesseract imports ~ 5 seconds
-print("PyTesseract Imports")
-import pytesseract
-print("PyTesseract Imports done!")
+if "Pix2Text" in list_of_active_models:
+    #pix2text imports ~ 2.6 minutes
+    print("Pix2Text Imports")
+    from pix2text import Pix2Text, merge_line_texts
+    print("Pix2Text Imports done!")
 
-pytesseract.pytesseract.tesseract_cmd = 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
-"""
+if "pytesseract" in list_of_active_models:
+    #PyTesseract imports ~ 5 seconds
+    print("PyTesseract Imports")
+    import pytesseract
+    print("PyTesseract Imports done!")
 
-"""
-#Google Document API imports ~ 30 seconds
-print("Google Docs Imports")
-from google.api_core.client_options import ClientOptions
-from google.cloud import documentai  # type: ignore
-print("Google Docs Imports done!")
-"""
+    pytesseract.pytesseract.tesseract_cmd = 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 
-"""
-#Meta's Nougat imports - to convert other image formats into pdf files ~ 4 seconds
-print("Meta's Nougat Imports")
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-from PIL import Image
-import subprocess
-print("Meta's Nougat Imports done!")
-"""
+if "google_document_ai" in list_of_active_models:
+    #Google Document API imports ~ 30 seconds
+    print("Google Docs Imports")
+    from google.api_core.client_options import ClientOptions
+    from google.cloud import documentai  # type: ignore
+    print("Google Docs Imports done!")
 
-# print("Done with imports!!")
+if "meta_nougat" in list_of_active_models:
+    #Meta's Nougat imports - to convert other image formats into pdf files ~ 4 seconds
+    print("Meta's Nougat Imports")
+    from reportlab.lib.pagesizes import letter
+    from reportlab.pdfgen import canvas
+    from PIL import Image
+    import subprocess
+    print("Meta's Nougat Imports done!")
+
+print("Done with imports!!")
 
 def easy_ocr_extract_text(file_path: str):
     reader = easyocr.Reader(['en'])
@@ -151,17 +160,9 @@ def meta_nougat_extract_text(file_path: str):
 
     return file_path 
 
-list_of_models = [
-    "easy_ocr", 
-    "keras_ocr",
-    "pix2text",
-    "pytesseract",
-    "google_document_ai",
-    "meta_nougat"
-]
-
 def extract_text(file_path: str, model_to_use: str = ""):
-    model_to_use = "none"
+    if model_to_use not in list_of_active_models:
+        model_to_use = "none"
         
     print(f"Extracting text for file: {file_path} using model: {model_to_use}")
 

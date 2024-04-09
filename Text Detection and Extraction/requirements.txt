@@ -3,3 +3,4 @@ psycopg2-binary
 flask-socketio
 python-dotenv
 gunicorn
+cryptography
